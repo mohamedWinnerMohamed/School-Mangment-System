@@ -1,0 +1,197 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+* {
+  padding: 0;
+  margin: 0;
+  box-sizing: border-box;
+}
+
+.react-calendar {
+  width: 100% !important;
+  border: none !important;
+  font-family: "Inter", sans-serif !important;
+}
+
+.react-calendar__navigation__label__labelText {
+  font-weight: 600;
+}
+
+.react-calendar__tile--active {
+  background-color: #c3ebfa !important;
+  color: black !important;
+}
+
+.rbc-btn-group:first-child {
+  display: none !important;
+}
+
+.rbc-toolbar-label {
+  text-align: right !important;
+  padding: 0px 20px !important;
+}
+
+.rbc-btn-group:last-child {
+  font-size: 13px !important;
+}
+
+.rbc-btn-group:last-child button {
+  border: none !important;
+  background-color: #f1f0ff !important;
+  margin-left: 2px !important;
+}
+
+.rbc-toolbar button.rbc-active {
+  background-color: #dbdafe !important;
+  box-shadow: none !important;
+}
+
+.rbc-time-view {
+  border-color: #eee !important;
+  margin-bottom: 0px !important;
+  /* margin-bottom: 20px; */
+}
+
+.rbc-time-header {
+  display: none !important;
+}
+
+.rbc-time-content {
+  border: none !important;
+  margin-bottom: 0px !important;
+  height: 100%;
+}
+
+.rbc-time-gutter.rbc-time-column {
+  font-size: 12px !important;
+
+  width: 70px !important;
+  min-width: 70px !important;
+  max-width: 70px !important;
+}
+
+.rbc-time-gutter.rbc-time-column .rbc-time-slot-group {
+  padding: 0px 10px !important;
+  /* display: flex;
+  align-items: center;
+  justify-content: center; */
+  /* height: 100%; */
+}
+
+.rbc-time-slot {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+.rbc-day-slot .rbc-time-slot {
+  border-top: none !important;
+}
+
+.rbc-time-slot-group {
+  background-color: #f7fdff !important;
+}
+
+.rbc-day-slot {
+  font-size: 14px !important;
+}
+
+.rbc-event {
+  border: none !important;
+  color: black !important;
+  padding: 10px !important;
+  /* margin: 6px !important;
+  width: 99% !important; */
+  margin: 6px 0 !important;
+  width: 95% !important;
+  left: 7% !important;
+}
+
+.rbc-event:nth-child(1) {
+  background-color: #e2f8ff !important;
+}
+.rbc-event:nth-child(2) {
+  background-color: #fefce8 !important;
+}
+.rbc-event:nth-child(3) {
+  background-color: #f2f1ff !important;
+}
+.rbc-event:nth-child(4) {
+  background-color: #fdf2fb !important;
+}
+.rbc-event:nth-child(5) {
+  background-color: #e2f8ff !important;
+}
+.rbc-event:nth-child(6) {
+  background-color: #fefce8 !important;
+}
+.rbc-event:nth-child(7) {
+  background-color: #f2f1ff !important;
+}
+.rbc-event:nth-child(8) {
+  background-color: #fdf2fb !important;
+}
+
+.rbc-event-label {
+  color: gray !important;
+  margin-bottom: 5px;
+}
+
+.rbc-label {
+  line-height: 0;
+}
+
+.custom-select__value-container {
+  flex-wrap: nowrap !important;
+  overflow-x: auto !important;
+  max-height: 42px;
+  scroll-behavior: smooth;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.custom-select__value-container::-webkit-scrollbar {
+  display: none;
+}
+.custom-select__multi-value {
+  flex-shrink: 0;
+  margin-top: 5px !important;
+  margin-bottom: 2px !important;
+  border-radius: 5px !important;
+}
+
+.custom-select__multi-value__label {
+  padding: 2px 5px !important ;
+}
+.custom-select__multi-value__remove:hover {
+  border-radius: 5px !important;
+}
+
+.datepicker-popper-on-top{
+  z-index: 9999 !important;
+}
+
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+input:-webkit-autofill:active {
+  -webkit-box-shadow: 0 0 0 1000px white inset !important;
+  border: 1px solid #ddd !important;
+  -webkit-text-fill-color: #000 !important;
+}
+
+@media (min-width: 1024px) {
+  .custom-select__value-container {
+    scrollbar-width: auto !important;
+    -ms-overflow-style: auto !important;
+  }
+  .custom-select__value-container::-webkit-scrollbar {
+    display: block !important;
+    height: 4px;
+  }
+  .custom-select__value-container::-webkit-scrollbar-thumb {
+    background: #ccc;
+    border-radius: 4px;
+  }
+}
