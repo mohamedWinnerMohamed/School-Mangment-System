@@ -4,9 +4,12 @@ import dynamic from "next/dynamic";
 import Image from "next/image";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { deleteTeacherAction } from "../lib/actions";
-// import { deleteStudentAction } from "../lib/actions";
-// import { deleteParentAction } from "../lib/actions";
+import {
+  deleteTeacherAction,
+  deleteStudentAction,
+  deleteParentAction,
+} from "../lib/actions";
+import StudentPage from "../(dashboard)/student/page";
 
 const TeacherForm = dynamic(() => import("./forms/TeacherForm"), {
   loading: () => <h1>Loading...</h1>,
@@ -20,22 +23,36 @@ const ParentForm = dynamic(() => import("./forms/ParentForm"), {
 
 const forms: {
   [key: string]: (
+    setOpen: React.Dispatch<React.SetStateAction<boolean>>,
     type: "create" | "update",
     data?: any,
     classes?: string[] | any,
-    subjects?: string[] | any
+    subjects?: string[] | any,
+    students?: string[] | any,
+    parent?: string[] | any
   ) => JSX.Element;
 } = {
-  teacher: (type, data, classes, subjects) => (
+  teacher: (setOpen, type, data, classes, subjects) => (
     <TeacherForm
       type={type}
       data={data}
       classes={classes}
       subjects={subjects}
+      onClose={() => setOpen(false)}
     />
   ),
-  student: (type, data) => <StudentForm type={type} data={data} />,
-  parent: (type, data) => <ParentForm type={type} data={data} />,
+  student: (setOpen, type, data, classes, subjects, students, parent) => (
+    <StudentForm
+      type={type}
+      data={data}
+      classes={classes}
+      parent={parent}
+      onClose={() => setOpen(false)}
+    />
+  ),
+  parent: (setOpen, type, data, classes, subjects, students) => (
+    <ParentForm type={type} data={data} students={students} onClose={() => setOpen(false)} />
+  ),
 };
 
 const FormModal = ({
@@ -45,6 +62,8 @@ const FormModal = ({
   id,
   classes,
   subjects,
+  students,
+  parent,
 }: {
   table:
     | "teacher"
@@ -63,24 +82,19 @@ const FormModal = ({
   data?: any;
   classes?: string[];
   subjects?: string[];
-  id?: number;
+  students?: any[];
+  parent?: any[];
+  id?: string;
 }) => {
   const size = type === "create" ? "w-8 h-8" : "w-7 h-7";
-  const bgColor =
-    type === "create"
-      ? "bg-lamaYellow"
-      : type === "update"
-      ? "bg-lamaSky"
-      : "bg-lamaPurple";
-
   const [open, setOpen] = useState(false);
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
-  const deleteActions: { [key: string]: (id: number) => Promise<any> } = {
+  const deleteActions: { [key: string]: (id: string) => Promise<any> } = {
     teacher: deleteTeacherAction,
-    // student: deleteStudentAction,
-    // parent: deleteParentAction,
+    student: deleteStudentAction,
+    parent: deleteParentAction,
   };
 
   const handleDeleteSubmit = async (event: React.FormEvent) => {
@@ -110,14 +124,17 @@ const FormModal = ({
   const Form = () => {
     return type === "delete" && id ? (
       <div className=" ">
-        <form onSubmit={handleDeleteSubmit} className="p-4 flex flex-col gap-4">
-          <span className="text-center font-medium">
-            All data will be lost. Are you sure you want to delete this {table}?
+        <form className="p-4 flex flex-col gap-4">
+          <span className="text-center font-medium text-lg">
+            Are you sure you want to delete this {table}?
+            <br />
+            <span className="text-sm">All data will be lost</span>
           </span>
           <button
             type="submit"
-            className="bg-red-700 text-white py-2 px-4 rounded-md border-none w-max self-center disabled:bg-gray-400"
+            className="bg-red-500 hover:opacity-90 text-white font-bold py-2 px-4 rounded-md border-none w-max self-center disabled:bg-gray-400"
             disabled={isSubmitting}
+            onClick={handleDeleteSubmit}
           >
             {isSubmitting ? "Deleting..." : "Delete"}
           </button>
@@ -126,8 +143,10 @@ const FormModal = ({
           )}
         </form>
       </div>
-    ) : type === "create" || type === "update" ? (
-      forms[table](type, data, classes, subjects)
+    ) : type === "update" ? (
+      forms[table](setOpen, type, data, classes, subjects, students, parent)
+    ) : type === "create" ? (
+      forms[table](setOpen, type, data, classes, subjects, students, parent)
     ) : (
       "Form not found!"
     );
@@ -136,10 +155,38 @@ const FormModal = ({
   return (
     <>
       <button
-        className={`${size} flex items-center justify-center rounded-full ${bgColor}`}
+        className={`${size} flex items-center justify-center rounded-full ${
+          type === "create"
+            ? "bg-lamaYellow"
+            : type === "delete"
+            ? " bg-red-400 "
+            : "bg-slate-300"
+        }`}
         onClick={() => setOpen(true)}
       >
-        <Image src={`/${type}.png`} alt="" width={16} height={16} />
+        {/* <Image src={`/${type}.png`} alt="" width={16} height={16} /> */}
+        {type === "create" ? (
+          <img
+            width="22"
+            height="22"
+            src="https://img.icons8.com/pulsar-line/48/plus.png"
+            alt="plus"
+          />
+        ) : type === "delete" ? (
+          <img
+            width="16"
+            height="16"
+            src="https://img.icons8.com/pastel-glyph/128/trash.png"
+            alt="filled-trash"
+          />
+        ) : (
+          <img
+            width="20"
+            height="20"
+            src="https://img.icons8.com/forma-bold-filled/24/pencil.png"
+            alt="pencil"
+          />
+        )}
       </button>
       {open && (
         <div className=" w-screen h-screen absolute left-0 top-0 bg-black bg-opacity-60 z-50 flex items-center justify-center">
@@ -156,7 +203,7 @@ const FormModal = ({
           >
             <div className="flex-shrink-0 p-4 pb-2">
               <div
-                className="absolute top-4 right-4 cursor-pointer z-10"
+                className="absolute top-4 right-4 cursor-pointer z-10 hover:bg-gray-100 p-2 rounded-md"
                 onClick={() => setOpen(false)}
               >
                 <Image src="/close.png" alt="" width={14} height={14} />
@@ -174,5 +221,4 @@ const FormModal = ({
     </>
   );
 };
-
 export default FormModal;

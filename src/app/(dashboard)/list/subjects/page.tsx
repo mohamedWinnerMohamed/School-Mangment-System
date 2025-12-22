@@ -5,6 +5,8 @@ import TableSearch from "@/app/ui/TableSearch";
 import { role, subjectsData } from "@/lib/data";
 import Image from "next/image";
 
+export const dynamic = "force-dynamic";
+
 type Subject = {
   id: number;
   name: string;
@@ -41,7 +43,7 @@ const SubjectListPage = () => {
           {role === "admin" && (
             <>
               <FormModal table="subject" type="update" data={item} />
-              <FormModal table="subject" type="delete" id={item.id} />
+              <FormModal table="subject" type="delete" id={item.documentId} />
             </>
           )}
         </div>
@@ -72,7 +74,7 @@ const SubjectListPage = () => {
       {/* LIST */}
       <Table columns={columns} renderRow={renderRow} data={subjectsData} />
       {/* PAGINATION */}
-      <Pagination />
+      <Pagination count={subjectsData.length} />
     </div>
   );
 };

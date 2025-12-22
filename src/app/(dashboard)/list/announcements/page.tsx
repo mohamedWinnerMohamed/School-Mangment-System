@@ -5,6 +5,8 @@ import TableSearch from "@/app/ui/TableSearch";
 import { announcementsData, role } from "@/lib/data";
 import Image from "next/image";
 
+export const dynamic = "force-dynamic";
+
 type Announcement = {
   id: number;
   title: string;
@@ -80,7 +82,7 @@ const AnnouncementListPage = () => {
       {/* LIST */}
       <Table columns={columns} renderRow={renderRow} data={announcementsData} />
       {/* PAGINATION */}
-      <Pagination />
+      <Pagination count={announcementsData.length} />
     </div>
   );
 };

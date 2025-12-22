@@ -5,6 +5,8 @@ import TableSearch from "@/app/ui/TableSearch";
 import { eventsData, role } from "@/lib/data";
 import Image from "next/image";
 
+export const dynamic = "force-dynamic";
+
 type Event = {
   id: number;
   title: string;
@@ -92,7 +94,7 @@ const EventListPage = () => {
       {/* LIST */}
       <Table columns={columns} renderRow={renderRow} data={eventsData} />
       {/* PAGINATION */}
-      <Pagination />
+      <Pagination count={eventsData.length} />
     </div>
   );
 };

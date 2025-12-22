@@ -1,24 +1,43 @@
-function Pagination() {
+"use client";
+
+import { useRouter, useSearchParams } from "next/navigation";
+import Pagination from "@mui/material/Pagination"; 
+
+
+const AppPagination = ({ count }: { count: number }) => {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const ITEM_PER_PAGE = 15;
+  const currentPage = parseInt(searchParams.get("page") || "1");
+  const totalPages = Math.ceil(count / ITEM_PER_PAGE);
+
+  if (totalPages == 0) return null;
+
+  const changePage = (newPage: number) => {
+    const params = new URLSearchParams(searchParams);
+    params.set("page", newPage.toString());
+    router.push(`${window.location.pathname}?${params}`);
+  };
+
+  const handlePagination = (
+    _: React.ChangeEvent<unknown>,
+    pageNumber: number
+  ) => {
+    changePage(pageNumber);
+  };
+
   return (
     <div className="p-4 flex items-center justify-center gap-3 text-gray-500">
-      <button
-        disabled
-        className="p-2 py-1 rounded-md bg-slate-200 text-xs font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
-      >
-        {"<"}
-      </button>
-      <div className="flex items-center gap-1 text-sm">
-        <button className="px-2 rounded-md bg-lamaSky">1</button>
-        <button className="px-2 rounded-md ">2</button>
-        <button className="px-2 rounded-md ">3</button>
-        ...
-        <button className="px-2 rounded-md ">10</button>
-      </div>
-      <button className="p-2 py-1 rounded-md bg-slate-200 text-xs font-semibold disabled:opacity-50 disabled:cursor-not-allowed">
-        {">"}
-      </button>
+      <Pagination
+        color="standard"
+        count={totalPages}
+        page={currentPage}
+        onChange={handlePagination}
+        boundaryCount={1}
+        siblingCount={1}
+      />
     </div>
   );
-}
+};
 
-export default Pagination;
+export default AppPagination;

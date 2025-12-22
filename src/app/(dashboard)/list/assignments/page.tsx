@@ -5,6 +5,8 @@ import TableSearch from "@/app/ui/TableSearch";
 import { assignmentsData, role } from "@/lib/data";
 import Image from "next/image";
 
+export const dynamic = "force-dynamic";
+
 type Assignment = {
   id: number;
   subject: string;
@@ -89,7 +91,7 @@ const AssignmentListPage = () => {
       {/* LIST */}
       <Table columns={columns} renderRow={renderRow} data={assignmentsData} />
       {/* PAGINATION */}
-      <Pagination />
+      <Pagination count={assignmentsData.length} />
     </div>
   );
 };

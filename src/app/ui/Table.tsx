@@ -9,7 +9,8 @@ const Table = ({
   data: any[];
   }) => {
   return (
-    <table className="w-full mt-4">
+    // <table className="w-full mt-4">
+    <table className={`w-full mt-4 ${data.length > 0 ? "" : "h-full"}`}>
       <thead>
         <tr className="text-left text-gray-500 text-sm">
           {columns.map((col) => (
@@ -17,7 +18,17 @@ const Table = ({
           ))}
         </tr>
       </thead>
-      <tbody>{data.map((item) => renderRow(item))}</tbody>
+      <tbody className="">
+        {data.length > 0 ? (
+          data.map((item) => renderRow(item))
+        ) : (
+          <tr className="">
+            <td colSpan={columns.length} className="text-center py-4 text-gray-500">
+              No Data Found
+            </td>
+          </tr>
+        )}
+      </tbody>
     </table>
   );
 };

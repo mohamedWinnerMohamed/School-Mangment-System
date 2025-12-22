@@ -5,7 +5,11 @@ import { Controller, useForm } from "react-hook-form";
 import { z } from "zod";
 import InputField from "../InputField";
 import { useRouter } from "next/navigation";
-import { createTeacherAction } from "@/app/lib/actions";
+import {
+  checkValidationAction,
+  createTeacherAction,
+  updateTeacherAction,
+} from "@/app/lib/actions";
 import Select from "react-select";
 import { useState, useRef, useEffect } from "react";
 import DatePicker from "react-datepicker";
@@ -21,17 +25,34 @@ const schema = z.object({
   firstName: z.string().min(1, { message: "First name is required!" }),
   lastName: z.string().min(1, { message: "Last name is required!" }),
   teacherId: z.string().min(1, { message: "Teacher ID is required!" }),
-  phoneNumber: z.string().min(1, { message: "Phone is required!" }),
+  phoneNumber: z
+    .string()
+    .min(1, { message: "Phone is required!" })
+    .regex(/^01[0125]\d{8}$/, { message: "Enter a valid phone number!" }),
   address: z.string().min(1, { message: "Address is required!" }),
-  bloodType: z.string().min(1, { message: "Blood Type is required!" }),
-  birthday: z.coerce.date({ message: "Birthday is required!" }),
-  sex: z.object(
-    {
+  birthday: z
+    .preprocess((val) => {
+      if (typeof val === "string" || val instanceof Date) return new Date(val);
+      if (val === undefined || val === null) return undefined;
+      return undefined;
+    }, z.date({ required_error: "Birthday is required!" }))
+    .refine((date) => !isNaN(date.getTime()), { message: "Invalid date" }),
+  gender: z
+    .object({
       value: z.string(),
       label: z.string(),
-    },
-    { message: "Sex is required!" }
-  ),
+    })
+    .refine((val) => val !== undefined, {
+      message: "Gender is required!",
+    }),
+  bloodType: z
+    .object({
+      value: z.string(),
+      label: z.string(),
+    })
+    .refine((val) => val !== undefined, {
+      message: "Blood Type is required!",
+    }),
   classes: z
     .array(
       z.object({
@@ -39,7 +60,7 @@ const schema = z.object({
         label: z.string(),
       })
     )
-    .min(1, { message: "Class is required." }),
+    .min(1, { message: "Class is required!" }),
   subjects: z
     .array(
       z.object({
@@ -47,7 +68,7 @@ const schema = z.object({
         label: z.string(),
       })
     )
-    .min(1, { message: "Subject is required." }),
+    .min(1, { message: "Subject is required!" }),
 });
 
 type Inputs = z.infer<typeof schema>;
@@ -68,15 +89,6 @@ const TeacherForm = ({
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
-  const {
-    register,
-    handleSubmit,
-    formState: { errors },
-    control,
-  } = useForm<Inputs>({
-    resolver: zodResolver(schema),
-  });
-
   const classOptions = classes.map((classItem) => ({
     value: classItem.id,
     label: classItem.name,
@@ -86,30 +98,82 @@ const TeacherForm = ({
     value: subjectItem.id,
     label: subjectItem.name,
   }));
-  
-// function for submit btn
-  const onSubmit = handleSubmit(async (data: Inputs) => {
+
+  const genderOptions = [
+    { value: "male", label: "Male" },
+    { value: "female", label: "Female" },
+  ];
+
+  const bloodTypeOptions = [
+    { value: "A+", label: "A+" },
+    { value: "B+", label: "B+" },
+    { value: "AB+", label: "AB+" },
+    { value: "O+", label: "O+" },
+    { value: "A-", label: "A-" },
+    { value: "B-", label: "B-" },
+    { value: "AB-", label: "AB-" },
+    { value: "O-", label: "O-" },
+  ];
+
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+    control,
+    setError,
+    clearErrors,
+  } = useForm<Inputs>({
+    resolver: zodResolver(schema),
+    defaultValues: {
+      userName: data?.userName,
+      email: data?.email,
+      firstName: data?.firstName,
+      lastName: data?.lastName,
+      teacherId: data?.teacherId,
+      phoneNumber: data?.phoneNumber,
+      address: data?.address,
+      bloodType: data?.bloodType
+        ? bloodTypeOptions.find((opt) => opt.value === data.bloodType)
+        : undefined,
+      gender: data?.gender
+        ? genderOptions.find((opt) => opt.value === data.gender)
+        : undefined,
+      birthday: data?.birthday ? new Date(data.birthday) : undefined,
+      subjects:
+        data?.subjects?.map((s: any) => ({
+          value: s.id,
+          label: s.name,
+        })) || [],
+      classes:
+        data?.classes?.map((c: any) => ({
+          value: c.id,
+          label: c.name,
+        })) || [],
+    },
+  });
+
+  // function for submit btn
+  const onSubmit = handleSubmit(async (formData: Inputs) => {
     setIsSubmitting(true);
     setServerError(null);
-    const classIDs = data.classes.map((c) => c.value);
-    const subjectIDs = data.subjects.map((s) => s.value);
-    const { subjects, classes, sex, ...otherFields } = data;
+    const classIDs = formData.classes.map((c) => c.value);
+    const subjectIDs = formData.subjects.map((s) => s.value);
+    const { subjects, classes, bloodType, gender, ...otherFields } = formData;
     const strapiData = {
       ...otherFields,
       classes: classIDs,
       subjects: subjectIDs,
-      sex: sex.value,
+      gender: gender.value,
+      bloodType: bloodType.value,
     };
-    console.log(subjectIDs);
-    console.log(classIDs);
     try {
-      console.log("before res");
-      const result = await createTeacherAction(strapiData);
+      const result =
+        type === "create"
+          ? await createTeacherAction(strapiData)
+          : await updateTeacherAction(data?.documentId, strapiData);
       if (result.success) {
         router.refresh();
         if (onClose) onClose();
-      } else {
-        setServerError(result.error || "An unknown error occurred.");
       }
     } catch (error) {
       setServerError((error as Error).message);
@@ -117,6 +181,66 @@ const TeacherForm = ({
       setIsSubmitting(false);
     }
   });
+
+  // for handel check id
+  const handleIdChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const teacherId = e.target.value;
+    if (errors.teacherId) {
+      clearErrors("teacherId");
+    }
+    try {
+      const result = await checkValidationAction(
+        data?.documentId,
+        "teacher",
+        "teacherId",
+        teacherId
+      );
+      if (teacherId.length == 0) {
+        setError("teacherId", {
+          type: "server",
+          message: "Id is required",
+        });
+      }
+      if (!result.success) {
+        if (result.field === "teacherId") {
+          setError("teacherId", {
+            type: "server",
+            message: result.error || "Id is already used",
+          });
+        }
+      }
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  // for handel check userName
+  const handleUserNameChange = async (
+    e: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const userName = e.target.value;
+    if (errors.userName) {
+      clearErrors("userName");
+    }
+    try {
+      const result = await checkValidationAction(
+        data?.documentId,
+        "teacher",
+        "userName",
+        userName
+      );
+      if (!result.success) {
+        if (result.field === "userName") {
+          setError("userName", {
+            type: "server",
+            message: result.error || "User Name is already used",
+          });
+        }
+      }
+    } catch (error) {
+      console.error(error);
+    }
+  };
 
   // for handel scroll bar in controller component
   const selectWrapperRef = useRef<HTMLDivElement>(null);
@@ -139,17 +263,22 @@ const TeacherForm = ({
       scrollContainer.removeEventListener("wheel", handleWheelScroll);
     };
   }, []);
-// for handel design select inputs
-  const customSelectStyles = {
+
+  // for handel design select inputs
+  const customSelectStyles = (hasError: boolean = false) => ({
     control: (provided: any, state: any) => ({
       ...provided,
       borderRadius: "0.45rem",
       height: "38px",
       color: "#4b5563",
-      border: state.isFocused ? "1px solid #60a5fa" : "1px solid #ddd",
+      border: hasError
+        ? "1px solid #ef4444"
+        : state.isFocused
+        ? "1px solid #60a5fa"
+        : "1px solid #ddd",
       boxShadow: state.isFocused ? "none" : provided.boxShadow,
       "&:hover": {
-        borderColor: "#60a5fa",
+        borderColor: hasError ? "#ef4444" : "#60a5fa",
         cursor: "pointer",
       },
     }),
@@ -161,12 +290,9 @@ const TeacherForm = ({
       ...provided,
       fontSize: "12px",
     }),
-  };
-  const sexOptions = [
-    { value: "male", label: "Male" },
-    { value: "female", label: "Female" },
-  ];
-// for handel calendar for birthday input
+  });
+
+  // for handel calendar for birthday input
   const [portal, setPortal] = useState<HTMLElement | null>(null);
   useEffect(() => {
     const portalRoot = document.body;
@@ -189,15 +315,14 @@ const TeacherForm = ({
         <div className="flex justify-start flex-wrap gap-6 md:gap-8">
           <InputField
             label="User Name"
-            name="userName"
-            defaultValue={data?.userName}
+            name="userName" 
+            onChange={handleUserNameChange}
             register={register}
             error={errors?.userName}
           />
           <InputField
             label="Email"
             name="email"
-            defaultValue={data?.email}
             register={register}
             error={errors?.email}
           />
@@ -211,53 +336,72 @@ const TeacherForm = ({
           <InputField
             label="First Name"
             name="firstName"
-            defaultValue={data?.firstName}
             register={register}
             error={errors.firstName}
           />
           <InputField
             label="Last Name"
             name="lastName"
-            defaultValue={data?.lastName}
             register={register}
             error={errors.lastName}
           />
           <InputField
             label="Teacher ID"
             name="teacherId"
-            defaultValue={data?.teacherId}
+            onChange={handleIdChange}
             register={register}
             error={errors.teacherId}
           />
           <InputField
             label="Phone"
             name="phoneNumber"
-            defaultValue={data?.phoneNumber}
             register={register}
             error={errors.phoneNumber}
           />
           <InputField
             label="Address"
             name="address"
-            defaultValue={data?.address}
             register={register}
             error={errors.address}
           />
-          <InputField
-            label="Blood Type"
-            name="bloodType"
-            defaultValue={data?.bloodType}
-            register={register}
-            error={errors.bloodType}
-          />
+          <div className="relative flex flex-col gap-1 w-full md:w-[29%]">
+            <label className="absolute -top-[0.55rem] left-3 bg-white z-10 px-[0.20rem] text-xs text-gray-500">
+              Blood Type
+            </label>
+            <Controller
+              name="bloodType"
+              control={control}
+              render={({ field }) => (
+                <Select
+                  {...field}
+                  maxMenuHeight={120}
+                  options={bloodTypeOptions}
+                  menuPortalTarget={document.body}
+                  styles={{
+                    ...customSelectStyles(!!errors.bloodType),
+                    menuPortal: (provided) => ({
+                      ...provided,
+                      zIndex: 9999,
+                      fontSize: "13px",
+                    }),
+                  }}
+                  placeholder="Select..."
+                />
+              )}
+            />
+            {errors.bloodType?.message && (
+              <p className="text-xs text-red-400">
+                {errors.bloodType.message.toString()}
+              </p>
+            )}
+          </div>
           <div
-            className="relative flex flex-col gap-2 w-full md:w-[29%]"
+            className="relative flex flex-col gap-1 w-full md:w-[29%]"
             ref={selectWrapperRef}
           >
             <label className="absolute -top-[0.55rem] left-3 bg-white z-10 px-[0.20rem] text-xs text-gray-500">
               Subject
             </label>
-
             <Controller
               name="subjects"
               control={control}
@@ -270,7 +414,7 @@ const TeacherForm = ({
                   maxMenuHeight={120}
                   menuPortalTarget={document.body}
                   styles={{
-                    ...customSelectStyles,
+                    ...customSelectStyles(!!errors.subjects),
                     menuPortal: (provided) => ({
                       ...provided,
                       zIndex: 9999,
@@ -280,15 +424,14 @@ const TeacherForm = ({
                 />
               )}
             />
-
-            {errors.classes?.message && (
+            {errors.subjects?.message && (
               <p className="text-xs text-red-400">
-                {errors.classes.message.toString()}
+                {errors.subjects.message.toString()}
               </p>
             )}
           </div>
           <div
-            className="relative flex flex-col gap-2 w-full md:w-[29%] "
+            className="relative flex flex-col gap-1 w-full md:w-[29%] "
             ref={selectWrapperRef}
           >
             <label className="absolute -top-[0.55rem] left-3 bg-white z-10 px-[0.20rem] text-xs text-gray-500">
@@ -306,7 +449,7 @@ const TeacherForm = ({
                   maxMenuHeight={120}
                   menuPortalTarget={document.body}
                   styles={{
-                    ...customSelectStyles,
+                    ...customSelectStyles(!!errors.classes),
                     menuPortal: (provided) => ({
                       ...provided,
                       zIndex: 9999,
@@ -316,29 +459,26 @@ const TeacherForm = ({
                 />
               )}
             />
-
             {errors.classes?.message && (
               <p className="text-xs text-red-400">
                 {errors.classes.message.toString()}
               </p>
             )}
           </div>
-
-          <div className="relative flex flex-col gap-2 w-full md:w-[29%]">
+          <div className="relative flex flex-col gap-1 w-full md:w-[29%]">
             <label className="absolute -top-[0.55rem] left-3 bg-white z-10 px-[0.20rem] text-xs text-gray-500">
-              Sex
+              Gender
             </label>
-
             <Controller
-              name="sex"
+              name="gender"
               control={control}
               render={({ field }) => (
                 <Select
                   {...field}
-                  options={sexOptions}
+                  options={genderOptions}
                   menuPortalTarget={document.body}
                   styles={{
-                    ...customSelectStyles,
+                    ...customSelectStyles(!!errors.gender),
                     menuPortal: (provided) => ({
                       ...provided,
                       zIndex: 9999,
@@ -349,15 +489,14 @@ const TeacherForm = ({
                 />
               )}
             />
-
-            {errors.sex?.message && (
+            {errors.gender?.message && (
               <p className="text-xs text-red-400">
-                {errors.sex.message.toString()}
+                {errors.gender.message.toString()}
               </p>
             )}
           </div>
           <div
-            className="relative flex flex-col gap-2 w-full md:w-[29%] "
+            className="relative flex flex-col gap-1 w-full md:w-[29%] "
             ref={selectWrapperRef}
           >
             <label className="absolute -top-[0.55rem] left-3 bg-white z-10 px-[0.20rem] text-xs text-gray-500">
@@ -371,7 +510,12 @@ const TeacherForm = ({
                   selected={field.value}
                   onChange={field.onChange}
                   onBlur={field.onBlur}
-                  className="ring-[1px] ring-gray-300 hover:ring-blue-400 focus:ring-blue-400 p-2 rounded-md text-sm w-full focus:outline-none"
+                  className={`ring-[1px] p-2 rounded-md text-sm w-full focus:outline-none 
+                    ${
+                      errors.birthday
+                        ? "ring-red-500 hover:ring-red-500 focus:ring-red-500"
+                        : "ring-gray-300 hover:ring-blue-400 focus:ring-blue-400"
+                    }`}
                   placeholderText="mm/dd/yyyy"
                   dateFormat="MM/dd/yyyy"
                   showYearDropdown
@@ -392,13 +536,23 @@ const TeacherForm = ({
           </div>
         </div>
       </div>
-      <button
-        type="submit"
-        className=" bg-blue-400 text-white p-2 rounded-md disabled:bg-gray-400"
-        disabled={isSubmitting}
-      >
-        {isSubmitting ? "Creating..." : type === "create" ? "Create" : "Update"}
-      </button>
+      {type === "create" ? (
+        <button
+          type="submit"
+          className=" bg-blue-400 text-white p-2 rounded-md disabled:bg-gray-400"
+          disabled={isSubmitting}
+        >
+          {isSubmitting ? "Creating..." : "Create"}
+        </button>
+      ) : (
+        <button
+          type="submit"
+          className=" bg-blue-400 text-white p-2 rounded-md disabled:bg-gray-400 "
+          disabled={isSubmitting}
+        >
+          {isSubmitting ? "Loading..." : "Update"}
+        </button>
+      )}
       {serverError && (
         <p className="text-xs text-red-500 text-center">{serverError}</p>
       )}

@@ -5,6 +5,8 @@ import TableSearch from "@/app/ui/TableSearch";
 import { classesData, role } from "@/lib/data";
 import Image from "next/image";
 
+export const dynamic = "force-dynamic";
+
 type Class = {
   id: number;
   name: string;
@@ -86,7 +88,7 @@ const ClassListPage = () => {
       {/* LIST */}
       <Table columns={columns} renderRow={renderRow} data={classesData} />
       {/* PAGINATION */}
-      <Pagination />
+      <Pagination count={classesData.length} />
     </div>
   );
 };

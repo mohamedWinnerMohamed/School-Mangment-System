@@ -206,6 +206,47 @@ export const studentsData = [
     class: "5A",
     address: "123 Main St, Anytown, USA",
   },
+  {
+    id: 10,
+    studentId: "1234567890",
+    name: "John Glover",
+    email: "john@glover.com",
+    phone: "1234567890",
+    grade: 5,
+    class: "5A",
+    address: "123 Main St, Anytown, USA",
+  },
+  {
+    id: 10,
+    studentId: "1234567890",
+    name: "John Glover",
+    email: "john@glover.com",
+    phone: "1234567890",
+    grade: 5,
+    class: "5A",
+    address: "123 Main St, Anytown, USA",
+  },
+  {
+    id: 10,
+    studentId: "1234567890",
+    name: "John Glover",
+    email: "john@glover.com",
+    phone: "1234567890",
+    grade: 5,
+    class: "5A",
+    address: "123 Main St, Anytown, USA",
+  },
+  {
+    id: 10,
+    studentId: "1234567890",
+    name: "John Glover",
+    email: "john@glover.com",
+    phone: "1234567890",
+    grade: 5,
+    class: "5A",
+    address: "123 Main St, Anytown, USA",
+  },
+                    
 ];
 
 export const parentsData = [

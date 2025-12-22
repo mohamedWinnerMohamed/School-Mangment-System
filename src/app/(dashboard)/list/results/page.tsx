@@ -5,6 +5,8 @@ import TableSearch from "@/app/ui/TableSearch";
 import { resultsData, role } from "@/lib/data";
 import Image from "next/image";
 
+export const dynamic = "force-dynamic";
+
 type Result = {
   id: number;
   subject: string;
@@ -104,7 +106,7 @@ const ResultListPage = () => {
       {/* LIST */}
       <Table columns={columns} renderRow={renderRow} data={resultsData} />
       {/* PAGINATION */}
-      <Pagination />
+      <Pagination count={resultsData.length} />
     </div>
   );
 };
