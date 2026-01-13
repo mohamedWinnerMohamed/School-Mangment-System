@@ -1,8 +1,4 @@
-import {
-  getClasses,
-  getParents,
-  getStudents,
-} from "@/app/lib/data";
+import { getClasses, getParents, getStudents } from "@/app/lib/data";
 import { redirect } from "next/navigation";
 import ErrorPage from "@/app/ui/ErrorPage";
 import FormModal from "@/app/ui/FormModal";
@@ -26,7 +22,7 @@ type Student = {
   phoneNumber?: string;
   grade: number;
   subjects: { name: string }[];
-  classes: { name: string }[];
+  class: { name: string };
   address: string;
   profilePicture: any;
   parent: { userName: string };
@@ -39,18 +35,18 @@ const columns = [
     className: "pl-2",
   },
   {
-    header: "parent",
-    accessor: "parent",
-    className: "hidden md:table-cell text-center",
-  },
-  {
     header: "Student ID",
     accessor: "studentId",
     className: "hidden md:table-cell text-center",
   },
   {
-    header: "Classes",
-    accessor: "classes",
+    header: "parent",
+    accessor: "parent",
+    className: "hidden md:table-cell text-center",
+  },
+  {
+    header: "Class",
+    accessor: "class",
     className: "hidden md:table-cell text-center",
   },
   {
@@ -85,15 +81,14 @@ const StudentsListPage = async ({
   if (!apiResponse.meta) {
     return <ErrorPage code={apiResponse.errorCode ?? 500} />;
   }
-
   const studentsData = apiResponse.data;
-  console.log(studentsData);
   const count = apiResponse.meta.pagination.total;
-  const classes = await getClasses();
+  const classesRes = await getClasses();
+  const classes = classesRes.data;
+  console.log("these are classes data from students page", classes);
   const parentRes = await getParents();
   const parent = parentRes.data;
 
-  console.log("parent(from students page):", parent);
   if (studentsData.length === 0 && page > 1) {
     const params = new URLSearchParams(searchParams as any);
     params.set("page", (page - 1).toString());
@@ -105,37 +100,41 @@ const StudentsListPage = async ({
       key={item.id}
       className="border-b border-gray-200 even:bg-slate-50 text-sm hover:bg-lamaPurpleLight"
     >
-      <td className="flex items-center gap-1 md:gap-3 py-3 px-2">
-        {
-          <Image
-            src="/profile.png"
-            alt="picture of teacher"
-            width={30}
-            height={30}
-            className=" rounded-full object-cover"
-          />
-        }
-        <div className="flex flex-col">
-          <h3 className="font-semibold">{item.userName}</h3>
-          <p className="text-xs text-gray-500">{item?.email}</p>
+      <td className="py-3 px-2">
+        <div className="flex items-center gap-1 md:gap-3">
+          {
+            <Image
+              src="/profile.png"
+              alt="picture of teacher"
+              width={30}
+              height={30}
+              className="rounded-full object-cover"
+            />
+          }
+          <div className="flex flex-col">
+            <h3 className="font-semibold">{item.userName}</h3>
+            <p className="text-xs text-gray-500">{item?.email}</p>
+          </div>
         </div>
       </td>
-      <td className="hidden md:table-cell px-2 text-center max-w-[100px] truncate">
-        {item.parent?.userName || "There isn't a parent yet"}
-      </td>
-      <td className="hidden md:table-cell px-2 text-center max-w-[50px] truncate">
+
+      <td className="hidden md:table-cell px-2 text-center truncate">
         {item.studentId}
       </td>
-      <td className="hidden md:table-cell text-center px-2 max-w-[50px] truncate">
-        {item.classes.map((cls) => cls.name).join(", ")}
+
+      <td className="hidden md:table-cell px-2 text-center truncate">
+        {item.parent?.userName || "There isn't a parent yet"}
       </td>
-      <td className="hidden md:table-cell px-2 text-center max-w-[50px] truncate">
+      <td className="hidden md:table-cell text-center px-2 truncate">
+        {item.class?.name || "N/A"}
+      </td>
+      <td className="hidden md:table-cell px-2 text-center truncate">
         {item.grade}
       </td>
-      <td className="hidden md:table-cell px-2 text-center max-w-[50px] truncate">
+      <td className="hidden md:table-cell px-2 text-center truncate">
         {item.phoneNumber}
       </td>
-      <td className="hidden md:table-cell px-2 text-center max-w-[100px] truncate">
+      <td className="hidden md:table-cell px-2 text-center truncate">
         {item.address}
       </td>
       <td className="table-cell text-center px-2 ">
@@ -151,7 +150,7 @@ const StudentsListPage = async ({
             </button>
           </Link>
           {role === "admin" && (
-            <FormModal table="student" type="delete" id={item.documentId} />
+            <FormModal table="student" type="delete" data={item} />
           )}
         </div>
       </td>

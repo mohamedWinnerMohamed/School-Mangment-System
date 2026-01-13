@@ -10,7 +10,6 @@ import { notFound } from "next/navigation";
 
 const SingleTeacherPage = async ({ params }: { params: { id: string } }) => {
   const teacher = await getTeacher(params.id);
-console.log(teacher)
   if (!teacher) {
     return notFound();
   }

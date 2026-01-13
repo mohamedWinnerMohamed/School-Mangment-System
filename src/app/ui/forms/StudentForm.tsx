@@ -15,6 +15,8 @@ import {
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import { createPortal } from "react-dom";
+import { useClasses, useParents } from "@/app/lib/hooks/useSWRData";
+import { useToast } from "@/app/context/ToastContext";
 
 const schema = z.object({
   userName: z
@@ -46,14 +48,10 @@ const schema = z.object({
     .refine((val) => val !== undefined, {
       message: "Blood Type is required!",
     }),
-  classes: z
-    .array(
-      z.object({
-        value: z.any(),
-        label: z.string(),
-      })
-    )
-    .min(1, { message: "Class is required!" }),
+  class: z.object({
+    value: z.any(),
+    label: z.string(),
+  }),
   gender: z
     .object({
       value: z.string(),
@@ -85,22 +83,28 @@ const StudentForm = ({
   type,
   data,
   onClose,
-  classes,
-  parent,
 }: {
   type: "create" | "update";
   data?: any;
   onClose?: () => void;
-  classes: { id: number | string; name: string }[];
-  parent: { id: number | string; userName: string }[];
 }) => {
   const router = useRouter();
+  const { showToast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
-  const classOptions = classes.map((classItem) => ({
-    value: classItem.id,
-    label: classItem.name,
-  }));
+  const [nameDone, setNameDone] = useState<boolean>(false);
+  const [idDone, setIdDone] = useState<boolean>(false);
+
+  const { classes } = useClasses();
+  const { parents } = useParents();
+
+  // Filter to show only non-full classes
+  const classOptions = classes
+    .filter((classItem: any) => !classItem.full)
+    .map((classItem: any) => ({
+      value: classItem.documentId,
+      label: classItem.name,
+    }));
 
   const genderOptions = [
     { value: "male", label: "Male" },
@@ -131,12 +135,10 @@ const StudentForm = ({
     { value: "AB-", label: "AB-" },
     { value: "O-", label: "O-" },
   ];
-  const parentNamesOptions = (parent || []).map((parentNameItem) => ({
+  const parentNamesOptions = (parents || []).map((parentNameItem: any) => ({
     value: parentNameItem.id,
     label: parentNameItem.userName,
   }));
-  const parentData = parent;
-  console.log(data);
   const {
     register,
     handleSubmit,
@@ -164,11 +166,12 @@ const StudentForm = ({
       grade: data?.grade
         ? gradeOptions.find((opt) => opt.value === data.grade)
         : undefined,
-      classes:
-        data?.classes?.map((c: any) => ({
-          value: c.id,
-          label: c.name,
-        })) || [],
+      class: data?.class
+        ? {
+            value: data.class.documentId,
+            label: data.class.name,
+          }
+        : undefined,
       parent: data?.parent
         ? {
             value: data.parent.id,
@@ -182,17 +185,24 @@ const StudentForm = ({
   const onSubmit = handleSubmit(async (formData: Inputs) => {
     setIsSubmitting(true);
     setServerError(null);
-    const classIDs = formData.classes.map((c) => c.value);
+    const classIDs = formData.class.value;
     const parentID = formData.parent.value;
-    const { parent, classes, bloodType, gender, grade, ...otherFields } =
-      formData;
+    const {
+      parent,
+      class: classObj,
+      bloodType,
+      gender,
+      grade,
+      ...otherFields
+    } = formData;
     const strapiData = {
       ...otherFields,
-      classes: classIDs,
+      class: classIDs,
       gender: gender.value,
       bloodType: bloodType.value,
       grade: grade.value,
       parent: parentID,
+      oldClassId: data?.class?.documentId,
     };
     try {
       const result =
@@ -200,6 +210,12 @@ const StudentForm = ({
           ? await createStudentAction(strapiData)
           : await updateStudentAction(data?.documentId, strapiData);
       if (result.success) {
+        showToast(
+          type === "create"
+            ? "Student created successfully!"
+            : "Student updated successfully!",
+          "success"
+        );
         // const updateStudentData = {
         //   students,
         //   parent: true,
@@ -208,18 +224,23 @@ const StudentForm = ({
         // await updateStudentAction(data?.documentId, updateStudentData);
         router.refresh();
         if (onClose) onClose();
+      } else {
+        // عرض الخطأ من السيرفر
+        const errorMessage = result.error || "An error occurred";
+        showToast(errorMessage, "error");
+        setServerError(errorMessage);
       }
     } catch (error) {
-      setServerError((error as Error).message);
+      const errorMessage = (error as Error).message;
+      showToast(errorMessage, "error");
+      setServerError(errorMessage);
     } finally {
       setIsSubmitting(false);
     }
   });
 
   // for handel check id
-  const handleIdChange = async (
-    e: React.ChangeEvent<HTMLInputElement>
-  ) => {
+  const handleIdChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const studentId = e.target.value;
     if (errors.studentId) {
       clearErrors("studentId");
@@ -237,7 +258,7 @@ const StudentForm = ({
           message: "Id is required",
         });
       }
-        
+
       if (!result.success) {
         if (result.field === "studentId") {
           setError("studentId", {
@@ -246,12 +267,17 @@ const StudentForm = ({
           });
         }
       }
+      if (studentId.length > 0 && result.success) {
+        setIdDone(true);
+      } else {
+        setIdDone(false);
+      }
     } catch (error) {
       console.error(error);
     }
   };
 
-   // for handel check userName
+  // for handel check userName
   const handleUserNameChange = async (
     e: React.ChangeEvent<HTMLInputElement>
   ) => {
@@ -273,6 +299,11 @@ const StudentForm = ({
             message: result.error || "User Name is already used",
           });
         }
+      }
+      if (userName.length > 0 && result.success) {
+        setNameDone(true);
+      } else {
+        setNameDone(false);
       }
     } catch (error) {
       console.error(error);
@@ -306,6 +337,7 @@ const StudentForm = ({
     control: (provided: any, state: any) => ({
       ...provided,
       borderRadius: "0.45rem",
+      paddingLeft: "4px",
       height: "38px",
       color: "#4b5563",
       border: hasError
@@ -356,12 +388,21 @@ const StudentForm = ({
             onChange={handleUserNameChange}
             register={register}
             error={errors?.userName}
+            success={nameDone}
           />
           <InputField
             label="Email"
             name="email"
             register={register}
             error={errors?.email}
+          />
+          <InputField
+            label="Student ID"
+            name="studentId"
+            register={register}
+            onChange={handleIdChange}
+            error={errors.studentId}
+            success={idDone}
           />
         </div>
       </div>
@@ -383,13 +424,6 @@ const StudentForm = ({
             error={errors.lastName}
           />
           <InputField
-            label="Student ID"
-            name="studentId"
-            register={register}
-            onChange={handleIdChange}
-            error={errors.studentId}
-          />
-          <InputField
             label="Phone"
             name="phoneNumber"
             maxLength={11}
@@ -404,7 +438,7 @@ const StudentForm = ({
           />
 
           <div className="relative flex flex-col gap-1 w-full md:w-[29%]">
-            <label className="absolute -top-[0.55rem] left-3 bg-white z-10 px-[0.20rem] text-xs text-gray-500">
+            <label className="absolute -top-[0.65rem] left-3 bg-white z-10 px-[0.20rem] text-xs text-gray-500">
               Grade
             </label>
             <Controller
@@ -436,7 +470,7 @@ const StudentForm = ({
           </div>
 
           <div className="relative flex flex-col gap-1 w-full md:w-[29%]">
-            <label className="absolute -top-[0.55rem] left-3 bg-white z-10 px-[0.20rem] text-xs text-gray-500">
+            <label className="absolute -top-[0.65rem] left-3 bg-white z-10 px-[0.20rem] text-xs text-gray-500">
               Blood Type
             </label>
             <Controller
@@ -470,22 +504,24 @@ const StudentForm = ({
             className="relative flex flex-col gap-1 w-full md:w-[29%] "
             ref={selectWrapperRef}
           >
-            <label className="absolute -top-[0.55rem] left-3 bg-white z-10 px-[0.20rem] text-xs text-gray-500">
+            <label className="absolute -top-[0.65rem] left-3 bg-white z-10 px-[0.20rem] text-xs text-gray-500">
               Class
             </label>
             <Controller
-              name="classes"
+              name="class"
               control={control}
               render={({ field }) => (
                 <Select
                   {...field}
                   options={classOptions}
-                  isMulti
                   classNamePrefix="custom-select"
                   maxMenuHeight={120}
                   menuPortalTarget={document.body}
+                  onChange={async (selectedOption) => {
+                    field.onChange(selectedOption);
+                  }}
                   styles={{
-                    ...customSelectStyles(!!errors.classes),
+                    ...customSelectStyles(!!errors.class),
                     menuPortal: (provided) => ({
                       ...provided,
                       zIndex: 9999,
@@ -495,15 +531,15 @@ const StudentForm = ({
                 />
               )}
             />
-            {errors.classes?.message && (
+            {errors.class?.message && (
               <p className="text-xs text-red-400">
-                {errors.classes.message.toString()}
+                {errors.class.message.toString()}
               </p>
             )}
           </div>
 
           <div className="relative flex flex-col gap-1 w-full md:w-[29%]">
-            <label className="absolute -top-[0.55rem] left-3 bg-white z-10 px-[0.20rem] text-xs text-gray-500">
+            <label className="absolute -top-[0.65rem] left-3 bg-white z-10 px-[0.20rem] text-xs text-gray-500">
               Gender
             </label>
             <Controller
@@ -537,7 +573,7 @@ const StudentForm = ({
             className="relative flex flex-col gap-1 w-full md:w-[29%] "
             ref={selectWrapperRef}
           >
-            <label className="absolute -top-[0.55rem] left-3 bg-white z-10 px-[0.20rem] text-xs text-gray-500">
+            <label className="absolute -top-[0.65rem] left-3 bg-white z-10 px-[0.20rem] text-xs text-gray-500">
               Birthday
             </label>
             <Controller
@@ -573,7 +609,7 @@ const StudentForm = ({
             )}
           </div>
           <div className="relative flex flex-col gap-1 w-full md:w-[29%]">
-            <label className="absolute -top-[0.55rem] left-3 bg-white z-10 px-[0.20rem] text-xs text-gray-500">
+            <label className="absolute -top-[0.65rem] left-3 bg-white z-10 px-[0.20rem] text-xs text-gray-500">
               Parent Name
             </label>
             <Controller

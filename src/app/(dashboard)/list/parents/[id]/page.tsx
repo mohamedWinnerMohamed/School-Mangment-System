@@ -1,13 +1,10 @@
 import Announcements from "@/app/ui/Announcements";
-import BigCalendar from "@/app/ui/BigCalender";
-import Performance from "@/app/ui/Performance";
 import Image from "next/image";
 import Link from "next/link";
 import { getStudents, getParent, getParents } from "@/app/lib/data";
 import { notFound } from "next/navigation";
 import { role } from "@/lib/data";
 import FormModal from "@/app/ui/FormModal";
-import { h3 } from "framer-motion/client";
 
 const SingleParentPage = async ({ params }: { params: { id: string } }) => {
   const parent = await getParent(params.id);
@@ -171,7 +168,7 @@ const SingleParentPage = async ({ params }: { params: { id: string } }) => {
         </div>
         {/* BOTTOM */}
         <div className="mt-4 bg-white rounded-md p-4 h-fit">
-          <h1 className="ml-1">Student/s Name/s</h1>
+          <h1 className="ml-1">{parent.students.length > 1 ?"Students Names" : "Student Name"}</h1>
           {/* <BigCalendar /> */}
 
           {parent.students?.length > 0 ? (

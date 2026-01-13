@@ -158,11 +158,11 @@
 .custom-select__value-container {
   flex-wrap: nowrap !important;
   overflow-x: auto !important;
-  max-height: 42px;
+  max-height: 36px;
   scroll-behavior: smooth;
   scrollbar-width: none;
   -ms-overflow-style: none;
-  padding: 0 3px !important;
+  padding: 0 2px !important;
 }
 
 .custom-select__value-container::-webkit-scrollbar {
@@ -173,6 +173,7 @@
   margin-top: 5px !important;
   margin-bottom: 2px !important;
   border-radius: 4px !important;
+  font-size: 11px;
 }
 
 .custom-select__multi-value__label {
@@ -197,15 +198,51 @@ input:-webkit-autofill:active {
 
 @media (min-width: 1024px) {
   .custom-select__value-container {
-    scrollbar-width: auto !important;
+    scrollbar-width: thin !important;
     -ms-overflow-style: auto !important;
   }
   .custom-select__value-container::-webkit-scrollbar {
     display: block !important;
-    height: 4px;
+    /* height: 2px; */
   }
   .custom-select__value-container::-webkit-scrollbar-thumb {
     background: #ccc;
     border-radius: 4px;
   }
+  
+}
+
+
+/* Toast Notification Animations */
+@keyframes slide-in-right {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.animate-slide-in-right {
+  animation: slide-in-right 0.3s ease-out;
+}
+
+.hide-scrollbar-arrows {
+  scrollbar-width: thin;
+  scrollbar-color: #ccc transparent;
+}
+
+.hide-scrollbar-arrows::-webkit-scrollbar {
+  width: 6px;
+}
+
+.hide-scrollbar-arrows::-webkit-scrollbar-thumb {
+  background: #ccc;
+  border-radius: 3px;
+}
+
+.hide-scrollbar-arrows::-webkit-scrollbar-track {
+  background: transparent;
 }

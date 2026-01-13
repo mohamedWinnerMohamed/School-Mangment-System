@@ -15,6 +15,8 @@ import { useState, useRef, useEffect } from "react";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import { createPortal } from "react-dom";
+import { useClasses, useSubjects } from "@/app/lib/hooks/useSWRData";
+import { mutate } from "swr";
 
 const schema = z.object({
   userName: z
@@ -53,14 +55,14 @@ const schema = z.object({
     .refine((val) => val !== undefined, {
       message: "Blood Type is required!",
     }),
-  classes: z
-    .array(
-      z.object({
-        value: z.any(),
-        label: z.string(),
-      })
-    )
-    .min(1, { message: "Class is required!" }),
+  // classes: z
+  //   .array(
+  //     z.object({
+  //       value: z.any(),
+  //       label: z.string(),
+  //     })
+  //   )
+  //   .min(1, { message: "Class is required!" }),
   subjects: z
     .array(
       z.object({
@@ -77,24 +79,31 @@ const TeacherForm = ({
   type,
   data,
   onClose,
-  classes,
-  subjects,
 }: {
   type: "create" | "update";
   data?: any;
   onClose?: () => void;
-  classes: { id: number | string; name: string }[];
-  subjects: { id: number | string; name: string }[];
 }) => {
+  console.log("data from teacher form: ", data);
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
-  const classOptions = classes.map((classItem) => ({
-    value: classItem.id,
-    label: classItem.name,
-  }));
+  const [idDone, setIdDone] = useState<boolean>(false);
+  const [nameDone, setNameDone] = useState<boolean>(false);
 
-  const subjectOptions = subjects.map((subjectItem) => ({
+  // ✨ استخدام SWR hooks لجلب البيانات مع التخزين المؤقت
+  const { classes, isLoading: classesLoading } = useClasses();
+  const { subjects, isLoading: subjectsLoading } = useSubjects("active"); // فقط المواد النشطة
+
+  // Filter to show only non-full classes
+  // const classOptions = classes
+  //   // .filter((classItem: any) => classItem.full == "false" )
+  //   .map((classItem: any) => ({
+  //     value: classItem.id,
+  //     label: classItem.name,
+  //   }));
+
+  const subjectOptions = subjects.map((subjectItem: any) => ({
     value: subjectItem.id,
     label: subjectItem.name,
   }));
@@ -144,11 +153,11 @@ const TeacherForm = ({
           value: s.id,
           label: s.name,
         })) || [],
-      classes:
-        data?.classes?.map((c: any) => ({
-          value: c.id,
-          label: c.name,
-        })) || [],
+      // classes:
+      //   data?.classes?.map((c: any) => ({
+      //     value: c.id,
+      //     label: c.name,
+      //   })) || [],
     },
   });
 
@@ -156,22 +165,24 @@ const TeacherForm = ({
   const onSubmit = handleSubmit(async (formData: Inputs) => {
     setIsSubmitting(true);
     setServerError(null);
-    const classIDs = formData.classes.map((c) => c.value);
+    // const classIDs = formData.classes.map((c) => c.value);
     const subjectIDs = formData.subjects.map((s) => s.value);
-    const { subjects, classes, bloodType, gender, ...otherFields } = formData;
+    const { subjects, bloodType, gender, ...otherFields } = formData;
     const strapiData = {
       ...otherFields,
-      classes: classIDs,
+      // classes: classIDs,
       subjects: subjectIDs,
       gender: gender.value,
       bloodType: bloodType.value,
     };
+    console.log("strapiData: ", strapiData);
     try {
       const result =
         type === "create"
           ? await createTeacherAction(strapiData)
           : await updateTeacherAction(data?.documentId, strapiData);
       if (result.success) {
+        mutate("/api/teachers");
         router.refresh();
         if (onClose) onClose();
       }
@@ -209,6 +220,11 @@ const TeacherForm = ({
           });
         }
       }
+      if (teacherId.length > 0 && result.success) {
+        setIdDone(true);
+      } else {
+        setIdDone(false);
+      }
     } catch (error) {
       console.error(error);
     }
@@ -236,6 +252,11 @@ const TeacherForm = ({
             message: result.error || "User Name is already used",
           });
         }
+      }
+      if (userName.length > 0 && result.success) {
+        setNameDone(true);
+      } else {
+        setNameDone(false);
       }
     } catch (error) {
       console.error(error);
@@ -270,6 +291,7 @@ const TeacherForm = ({
       ...provided,
       borderRadius: "0.45rem",
       height: "38px",
+      paddingLeft: "4px",
       color: "#4b5563",
       border: hasError
         ? "1px solid #ef4444"
@@ -315,16 +337,25 @@ const TeacherForm = ({
         <div className="flex justify-start flex-wrap gap-6 md:gap-8">
           <InputField
             label="User Name"
-            name="userName" 
+            name="userName"
             onChange={handleUserNameChange}
             register={register}
             error={errors?.userName}
+            success={nameDone}
           />
           <InputField
             label="Email"
             name="email"
             register={register}
             error={errors?.email}
+          />
+          <InputField
+            label="Teacher ID"
+            name="teacherId"
+            onChange={handleIdChange}
+            register={register}
+            error={errors.teacherId}
+            success={idDone}
           />
         </div>
       </div>
@@ -346,13 +377,6 @@ const TeacherForm = ({
             error={errors.lastName}
           />
           <InputField
-            label="Teacher ID"
-            name="teacherId"
-            onChange={handleIdChange}
-            register={register}
-            error={errors.teacherId}
-          />
-          <InputField
             label="Phone"
             name="phoneNumber"
             register={register}
@@ -365,7 +389,7 @@ const TeacherForm = ({
             error={errors.address}
           />
           <div className="relative flex flex-col gap-1 w-full md:w-[29%]">
-            <label className="absolute -top-[0.55rem] left-3 bg-white z-10 px-[0.20rem] text-xs text-gray-500">
+            <label className="absolute -top-[0.65rem] left-3 bg-white z-10 px-[0.20rem] text-xs text-gray-500">
               Blood Type
             </label>
             <Controller
@@ -399,7 +423,7 @@ const TeacherForm = ({
             className="relative flex flex-col gap-1 w-full md:w-[29%]"
             ref={selectWrapperRef}
           >
-            <label className="absolute -top-[0.55rem] left-3 bg-white z-10 px-[0.20rem] text-xs text-gray-500">
+            <label className="absolute -top-[0.65rem] left-3 bg-white z-10 px-[0.20rem] text-xs text-gray-500">
               Subject
             </label>
             <Controller
@@ -430,11 +454,11 @@ const TeacherForm = ({
               </p>
             )}
           </div>
-          <div
+          {/* <div
             className="relative flex flex-col gap-1 w-full md:w-[29%] "
             ref={selectWrapperRef}
           >
-            <label className="absolute -top-[0.55rem] left-3 bg-white z-10 px-[0.20rem] text-xs text-gray-500">
+            <label className="absolute -top-[0.65rem] left-3 bg-white z-10 px-[0.20rem] text-xs text-gray-500">
               Class
             </label>
             <Controller
@@ -464,9 +488,9 @@ const TeacherForm = ({
                 {errors.classes.message.toString()}
               </p>
             )}
-          </div>
+          </div> */}
           <div className="relative flex flex-col gap-1 w-full md:w-[29%]">
-            <label className="absolute -top-[0.55rem] left-3 bg-white z-10 px-[0.20rem] text-xs text-gray-500">
+            <label className="absolute -top-[0.65rem] left-3 bg-white z-10 px-[0.20rem] text-xs text-gray-500">
               Gender
             </label>
             <Controller
@@ -499,7 +523,7 @@ const TeacherForm = ({
             className="relative flex flex-col gap-1 w-full md:w-[29%] "
             ref={selectWrapperRef}
           >
-            <label className="absolute -top-[0.55rem] left-3 bg-white z-10 px-[0.20rem] text-xs text-gray-500">
+            <label className="absolute -top-[0.65rem] left-3 bg-white z-10 px-[0.20rem] text-xs text-gray-500">
               Birthday
             </label>
             <Controller

@@ -146,10 +146,20 @@ const ParentsListPage = async ({
             <TableSearch />
             <div className="flex items-center gap-4 self-end">
               <button className="w-8 h-8 flex items-center justify-center rounded-full bg-lamaYellow">
-                <Image src="/filter.png" alt="" width={14} height={14} />
+                <img
+                  width="22"
+                  height="22"
+                  src="https://img.icons8.com/fluency-systems-filled/48/vertical-settings-mixer.png"
+                  alt="vertical-settings-mixer"
+                />
               </button>
               <button className="w-8 h-8 flex items-center justify-center rounded-full bg-lamaYellow">
-                <Image src="/sort.png" alt="" width={14} height={14} />
+                <img
+                  width="20"
+                  height="16"
+                  src="https://img.icons8.com/plumpy/24/generic-sorting.png"
+                  alt="generic-sorting"
+                />
               </button>
               {role === "admin" && (
                 <FormModal table="parent" type="create" students={students} />

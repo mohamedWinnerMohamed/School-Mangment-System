@@ -18,6 +18,7 @@ type Teacher = {
   userName: string;
   email: string;
   phoneNumber: string;
+  supervisingClass: string;
   subjects: { name: string }[];
   classes: { name: string }[];
   address: string;
@@ -33,6 +34,11 @@ const columns = [
   {
     header: "Teacher ID",
     accessor: "teacherId",
+    className: "hidden md:table-cell text-center",
+  },
+  {
+    header: "Supervisor",
+    accessor: "supervisor",
     className: "hidden md:table-cell text-center",
   },
   {
@@ -66,25 +72,28 @@ const TeacherListPage = async ({
   searchParams,
 }: {
   searchParams: { [key: string]: string | undefined };
-  }) => {
-  
+}) => {
   const page = searchParams.page ? parseInt(searchParams.page) : 1;
   const apiResponse = await getTeachers(page);
+  console.log("apiResponse:", apiResponse);
   if (!apiResponse.meta) {
     return <ErrorPage code={apiResponse.errorCode ?? 500} />;
   }
 
-
-  const teachersData = apiResponse.data; 
+  const teachersData = apiResponse.data;
+  console.log("teachersData from teachers page:", teachersData);
   const count = apiResponse.meta.pagination.total;
-  const classes = await getClasses();
-  const subjects = await getSubjects();
+  const classesRes = await getClasses();
+  const classes = classesRes.data;
+  console.log("classes from teachers page:", classes);
+
+  const subjectsResponse = await getSubjects("active");
+  const subjects = subjectsResponse?.data || [];
   if (teachersData.length === 0 && page > 1) {
     const params = new URLSearchParams(searchParams as any);
     params.set("page", (page - 1).toString());
     redirect(`/list/teachers?${params.toString()}`);
   }
-
 
   const renderRow = (item: Teacher) => (
     <tr
@@ -108,12 +117,11 @@ const TeacherListPage = async ({
         </div>
       </td>
 
-      
-
-
-
       <td className="hidden md:table-cell px-2 text-center max-w-[50px] truncate">
         {item.teacherId}
+      </td>
+      <td className="hidden md:table-cell px-2 text-center max-w-[50px] truncate">
+        {item.supervisingClass || "ـ"}
       </td>
       <td className="hidden md:table-cell text-center px-2 max-w-[100px] truncate">
         {item.subjects?.map((sub) => sub.name).join(", ")}
@@ -127,7 +135,6 @@ const TeacherListPage = async ({
       <td className="hidden md:table-cell px-2 text-center max-w-[100px] truncate">
         {item.address}
       </td>
-
 
       <td className="table-cell text-center px-2">
         <div className="flex items-center justify-center gap-2">
@@ -146,9 +153,6 @@ const TeacherListPage = async ({
           )}
         </div>
       </td>
-
-
-
     </tr>
   );
 
@@ -164,10 +168,20 @@ const TeacherListPage = async ({
             <TableSearch />
             <div className="flex items-center gap-4 self-end ">
               <button className="w-8 h-8 flex items-center justify-center rounded-full bg-lamaYellow">
-                <Image src="/filter.png" alt="" width={14} height={14} />
+                <img
+                  width="22"
+                  height="22"
+                  src="https://img.icons8.com/fluency-systems-filled/48/vertical-settings-mixer.png"
+                  alt="vertical-settings-mixer"
+                />
               </button>
               <button className="w-8 h-8 flex items-center justify-center rounded-full bg-lamaYellow">
-                <Image src="/sort.png" alt="" width={14} height={14} />
+                <img
+                  width="20"
+                  height="16"
+                  src="https://img.icons8.com/plumpy/24/generic-sorting.png"
+                  alt="generic-sorting"
+                />
               </button>
               {role === "admin" && (
                 <FormModal
@@ -183,7 +197,7 @@ const TeacherListPage = async ({
         {/* LIST */}
         <Table columns={columns} renderRow={renderRow} data={teachersData} />
       </div>
-      
+
       {/* PAGINATION */}
       <div className="mt-5">
         <AppPagination count={count} />

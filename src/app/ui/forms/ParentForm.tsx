@@ -11,6 +11,7 @@ import {
   updateParentAction,
   updateStudentAction,
 } from "@/app/lib/actions";
+import { mutate } from "swr";
 import { Controller, useForm } from "react-hook-form";
 import Select from "react-select";
 
@@ -44,14 +45,12 @@ const schema = z.object({
     .refine((val) => val !== undefined, {
       message: "Blood Type is required!",
     }),
-  students: z
-    .array(
-      z.object({
-        value: z.any(),
-        label: z.string(),
-      })
-    )
-    .optional(),
+  students: z.array(
+    z.object({
+      value: z.any(),
+      label: z.string(),
+    })
+  ),
 });
 
 type Inputs = z.infer<typeof schema>;
@@ -79,6 +78,8 @@ const ParentForm = ({
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
+  const [nameDone, setNameDone] = useState<boolean>(false);
+  const [idDone, setIdDone] = useState<boolean>(false);
 
   const studentsNamesOptions = (students || []).map((studentNameItem) => ({
     value: studentNameItem.documentId,
@@ -156,6 +157,7 @@ const ParentForm = ({
         // };
         // console.log("updateStudentData :", updateStudentData);
         // await updateStudentAction(data?.documentId, updateStudentData);
+        mutate("/api/parents");
         router.refresh();
         if (onClose) onClose();
       }
@@ -193,6 +195,11 @@ const ParentForm = ({
           });
         }
       }
+      if (parentId.length > 0 && result.success) {
+        setIdDone(true);
+      } else {
+        setIdDone(false);
+      }
     } catch (error) {
       console.error(error);
     }
@@ -220,6 +227,11 @@ const ParentForm = ({
             message: result.error || "User Name is already used",
           });
         }
+      }
+      if (userName.length > 0 && result.success) {
+        setNameDone(true);
+      } else {
+        setNameDone(false);
       }
     } catch (error) {
       console.error(error);
@@ -255,6 +267,7 @@ const ParentForm = ({
       borderRadius: "0.45rem",
       height: "38px",
       color: "#4b5563",
+      paddingLeft: "4px",
       border: hasError
         ? "1px solid #ef4444"
         : state.isFocused
@@ -268,7 +281,7 @@ const ParentForm = ({
     }),
     valueContainer: (provided: any) => ({
       ...provided,
-      padding: "0 6px",
+      padding: "0 4px",
     }),
     placeholder: (provided: any) => ({
       ...provided,
@@ -291,12 +304,21 @@ const ParentForm = ({
             onChange={handleUserNameChange}
             register={register}
             error={errors?.userName}
+            success={nameDone}
           />
           <InputField
             label="Email"
             name="email"
             register={register}
             error={errors?.email}
+          />
+          <InputField
+            label="Parent ID"
+            name="parentId"
+            onChange={handleIdChange}
+            register={register}
+            error={errors.parentId}
+            success={idDone}
           />
         </div>
       </div>
@@ -319,13 +341,6 @@ const ParentForm = ({
             error={errors.lastName}
           />
           <InputField
-            label="Parent ID"
-            name="parentId"
-            onChange={handleIdChange}
-            register={register}
-            error={errors.parentId}
-          />
-          <InputField
             label="Phone"
             name="phoneNumber"
             register={register}
@@ -338,7 +353,7 @@ const ParentForm = ({
             error={errors.address}
           />
           <div className="relative flex flex-col gap-1 w-full md:w-[29%]">
-            <label className="absolute -top-[0.55rem] left-3 bg-white z-10 px-[0.20rem] text-xs text-gray-500">
+            <label className="absolute -top-[0.65rem] left-3 bg-white z-10 px-[0.20rem] text-xs text-gray-500">
               Gender
             </label>
             <Controller
@@ -369,7 +384,7 @@ const ParentForm = ({
           </div>
 
           <div className="relative flex flex-col gap-1 w-full md:w-[29%]">
-            <label className="absolute -top-[0.55rem] left-3 bg-white z-10 px-[0.20rem] text-xs text-gray-500">
+            <label className="absolute -top-[0.65rem] left-3 bg-white z-10 px-[0.20rem] text-xs text-gray-500">
               Blood Type
             </label>
             <Controller
@@ -401,7 +416,7 @@ const ParentForm = ({
           </div>
 
           <div className="relative flex flex-col gap-1 w-full md:w-[29%]">
-            <label className="absolute -top-[0.55rem] left-3 bg-white z-10 px-[0.20rem] text-xs text-gray-500">
+            <label className="absolute -top-[0.65rem] left-3 bg-white z-10 px-[0.20rem] text-xs text-gray-500">
               Student/s Name/s
             </label>
             <Controller

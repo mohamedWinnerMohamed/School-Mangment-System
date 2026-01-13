@@ -13,7 +13,7 @@ const SingleStudentPage = async ({ params }: { params: { id: string } }) => {
   const classesData = await getClasses();
   const parentsRes = await getParents();
   const parentsData = parentsRes.data;
-  console.log(student);
+  // console.log(student);
   if (!student) {
     return notFound();
   }

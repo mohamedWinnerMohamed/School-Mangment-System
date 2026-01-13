@@ -8,6 +8,8 @@ import {
   deleteTeacherAction,
   deleteStudentAction,
   deleteParentAction,
+  deleteSubjectAction,
+  deleteClassAction,
 } from "../lib/actions";
 import StudentPage from "../(dashboard)/student/page";
 
@@ -20,6 +22,12 @@ const StudentForm = dynamic(() => import("./forms/StudentForm"), {
 const ParentForm = dynamic(() => import("./forms/ParentForm"), {
   loading: () => <h1>Loading...</h1>,
 });
+const SubjectForm = dynamic(() => import("./forms/SubjectForm"), {
+  loading: () => <h1>Loading...</h1>,
+});
+const ClassForm = dynamic(() => import("./forms/ClassesForm"), {
+  loading: () => <h1>Loading...</h1>,
+});
 
 const forms: {
   [key: string]: (
@@ -29,29 +37,52 @@ const forms: {
     classes?: string[] | any,
     subjects?: string[] | any,
     students?: string[] | any,
-    parent?: string[] | any
+    parent?: string[] | any,
+    teachers?: string[] | any
   ) => JSX.Element;
 } = {
-  teacher: (setOpen, type, data, classes, subjects) => (
-    <TeacherForm
-      type={type}
-      data={data}
-      classes={classes}
-      subjects={subjects}
-      onClose={() => setOpen(false)}
-    />
+  teacher: (setOpen, type, data) => (
+    <TeacherForm type={type} data={data} onClose={() => setOpen(false)} />
   ),
-  student: (setOpen, type, data, classes, subjects, students, parent) => (
-    <StudentForm
-      type={type}
-      data={data}
-      classes={classes}
-      parent={parent}
-      onClose={() => setOpen(false)}
-    />
+  student: (setOpen, type, data) => (
+    <StudentForm type={type} data={data} onClose={() => setOpen(false)} />
   ),
   parent: (setOpen, type, data, classes, subjects, students) => (
-    <ParentForm type={type} data={data} students={students} onClose={() => setOpen(false)} />
+    <ParentForm
+      type={type}
+      data={data}
+      students={students}
+      onClose={() => setOpen(false)}
+    />
+  ),
+  subject: (
+    setOpen,
+    type,
+    data
+  ) => (
+    <SubjectForm
+      type={type}
+      data={data}
+      // teachers={teachers}
+      onClose={() => setOpen(false)}
+    />
+  ),
+  class: (
+    setOpen,
+    type,
+    data,
+    classes,
+    subjects,
+    students,
+    parent,
+    teachers
+  ) => (
+    <ClassForm
+      type={type}
+      data={data}
+      supervisor={teachers}
+      onClose={() => setOpen(false)}
+    />
   ),
 };
 
@@ -63,6 +94,7 @@ const FormModal = ({
   classes,
   subjects,
   students,
+  teachers,
   parent,
 }: {
   table:
@@ -84,6 +116,7 @@ const FormModal = ({
   subjects?: string[];
   students?: any[];
   parent?: any[];
+  teachers?: any[];
   id?: string;
 }) => {
   const size = type === "create" ? "w-8 h-8" : "w-7 h-7";
@@ -95,19 +128,26 @@ const FormModal = ({
     teacher: deleteTeacherAction,
     student: deleteStudentAction,
     parent: deleteParentAction,
+    subject: deleteSubjectAction,
+    class: deleteClassAction,
   };
 
   const handleDeleteSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
     setServerError(null);
     const action = deleteActions[table];
-    if (!action || !id) {
-      setServerError(`Action not configured for '${table}' or id is missing.`);
+    // Check if we have either id or data
+    if (!action || (!id && !data)) {
+      setServerError(
+        `Action not configured for '${table}' or id/data is missing.`
+      );
       return;
     }
     setIsSubmitting(true);
     try {
-      const result = await action(id);
+      // Pass data if available (optional), otherwise pass id
+      const payload = data ? data : id;
+      const result = await action(payload);
       if (result && result.success) {
         router.refresh();
         setOpen(false);
@@ -122,7 +162,7 @@ const FormModal = ({
   };
 
   const Form = () => {
-    return type === "delete" && id ? (
+    return type === "delete" && (id || data) ? (
       <div className=" ">
         <form className="p-4 flex flex-col gap-4">
           <span className="text-center font-medium text-lg">
@@ -144,9 +184,27 @@ const FormModal = ({
         </form>
       </div>
     ) : type === "update" ? (
-      forms[table](setOpen, type, data, classes, subjects, students, parent)
+      forms[table](
+        setOpen,
+        type,
+        data,
+        classes,
+        subjects,
+        students,
+        parent,
+        teachers
+      )
     ) : type === "create" ? (
-      forms[table](setOpen, type, data, classes, subjects, students, parent)
+      forms[table](
+        setOpen,
+        type,
+        data,
+        classes,
+        subjects,
+        students,
+        parent,
+        teachers
+      )
     ) : (
       "Form not found!"
     );
