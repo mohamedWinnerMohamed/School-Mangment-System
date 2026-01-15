@@ -802,10 +802,11 @@ export const checkValidationAction = async (
       "studentId",
       "subjectId",
       "classId",
+      "lessonId",
       "userName",
       "name",
     ];
-    const allowedTypes = ["student", "teacher", "parent", "subject", "classe"];
+    const allowedTypes = ["student", "teacher", "parent", "subject", "classe", "lesson"];
     if (!type || !field || value === undefined || value === null) {
       return { success: true };
     }
